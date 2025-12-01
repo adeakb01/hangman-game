@@ -23,7 +23,8 @@ A modern, interactive Hangman game built with Python Flask, featuring a clean we
 #### GitHub Clone
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/hangman-web-game.git
+git clone https://github.com/adeakb01/hangman-game.git
+cd hangman-web-game
 
 #pip install flask
 
@@ -38,5 +39,5 @@ git clone https://github.com/yourusername/hangman-web-game.git
 
 #Open your browser and navigate to:
 #http://localhost:5000
-cd hangman-web-game
+
 

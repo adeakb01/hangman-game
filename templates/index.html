@@ -1,0 +1,336 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangman Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .game-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .word-display {
+            font-size: 2em;
+            letter-spacing: 10px;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        
+        .hangman-drawing {
+            text-align: center;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre;
+        }
+        
+        .keyboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            margin: 20px 0;
+        }
+        
+        .key {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2em;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .key:hover:not(:disabled) {
+            background-color: #e9e9e9;
+        }
+        
+        .key:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        .guessed {
+            background-color: #ddd;
+        }
+        
+        .correct {
+            background-color: #90EE90;
+        }
+        
+        .incorrect {
+            background-color: #FFB6C1;
+        }
+        
+        .game-info {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .message {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 10px 0;
+            min-height: 30px;
+        }
+        
+        .new-game-btn {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        .new-game-btn:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Hangman Game</h1>
+        
+        <div class="hangman-drawing" id="hangman-drawing">
+            <!-- Hangman drawing will be inserted here -->
+        </div>
+        
+        <div class="word-display" id="word-display">
+            <!-- Word display will be inserted here -->
+        </div>
+        
+        <div class="game-info">
+            <div>Guesses: <span id="incorrect-guesses">0</span>/<span id="max-attempts">6</span></div>
+            <div class="message" id="message"></div>
+            <button class="new-game-btn" id="new-game-btn">New Game</button>
+        </div>
+        
+        <div class="keyboard" id="keyboard">
+            <!-- Keyboard will be generated here -->
+        </div>
+        
+        <div id="guessed-letters">
+            <p>Guessed letters: <span id="guessed-letters-list"></span></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const wordDisplay = document.getElementById('word-display');
+            const hangmanDrawing = document.getElementById('hangman-drawing');
+            const incorrectGuessesSpan = document.getElementById('incorrect-guesses');
+            const maxAttemptsSpan = document.getElementById('max-attempts');
+            const messageDiv = document.getElementById('message');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const keyboardDiv = document.getElementById('keyboard');
+            const guessedLettersList = document.getElementById('guessed-letters-list');
+            
+            // Hangman drawings for each incorrect guess count
+            const hangmanDrawings = [
+                `
+                   -----
+                   |   |
+                       |
+                       |
+                       |
+                       |
+                ----------
+                `,
+                `
+                   -----
+                   |   |
+                   O   |
+                       |
+                       |
+                       |
+                ----------
+                `,
+                `
+                   -----
+                   |   |
+                   O   |
+                   |   |
+                       |
+                       |
+                ----------
+                `,
+                `
+                   -----
+                   |   |
+                   O   |
+                  /|   |
+                       |
+                       |
+                ----------
+                `,
+                `
+                   -----
+                   |   |
+                   O   |
+                  /|\\  |
+                       |
+                       |
+                ----------
+                `,
+                `
+                   -----
+                   |   |
+                   O   |
+                  /|\\  |
+                  /    |
+                       |
+                ----------
+                `,
+                `
+                   -----
+                   |   |
+                   O   |
+                  /|\\  |
+                  / \\  |
+                       |
+                ----------
+                `
+            ];
+            
+            // Create keyboard
+            function createKeyboard() {
+                keyboardDiv.innerHTML = '';
+                for (let i = 65; i <= 90; i++) {
+                    const letter = String.fromCharCode(i);
+                    const key = document.createElement('button');
+                    key.className = 'key';
+                    key.textContent = letter;
+                    key.dataset.letter = letter;
+                    key.addEventListener('click', () => makeGuess(letter));
+                    keyboardDiv.appendChild(key);
+                }
+            }
+            
+            // Update game display
+            function updateGameDisplay(gameState) {
+                wordDisplay.textContent = gameState.display_word;
+                incorrectGuessesSpan.textContent = gameState.incorrect_guesses;
+                maxAttemptsSpan.textContent = gameState.max_attempts;
+                
+                // Update hangman drawing
+                hangmanDrawing.textContent = hangmanDrawings[gameState.incorrect_guesses];
+                
+                // Update guessed letters
+                guessedLettersList.textContent = gameState.guessed_letters.join(', ');
+                
+                // Update keyboard
+                document.querySelectorAll('.key').forEach(key => {
+                    const letter = key.dataset.letter;
+                    if (gameState.guessed_letters.includes(letter)) {
+                        if (gameState.secret_word && gameState.secret_word.includes(letter)) {
+                            key.className = 'key correct';
+                        } else {
+                            key.className = 'key incorrect';
+                        }
+                        key.disabled = true;
+                    } else {
+                        key.className = 'key';
+                        key.disabled = gameState.game_over;
+                    }
+                });
+                
+                // Show game over message
+                if (gameState.game_over) {
+                    if (gameState.won) {
+                        messageDiv.textContent = 'Congratulations! You won!';
+                        messageDiv.style.color = 'green';
+                    } else {
+                        messageDiv.textContent = `Game over! The word was: ${gameState.secret_word}`;
+                        messageDiv.style.color = 'red';
+                    }
+                } else {
+                    messageDiv.textContent = '';
+                }
+            }
+            
+            // Make a guess
+            function makeGuess(letter) {
+                fetch('/guess', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ letter: letter })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                    } else {
+                        updateGameDisplay(data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Start a new game
+            function newGame() {
+                fetch('/new_game', {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    updateGameDisplay(data);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+            
+            // Initialize the game
+            function initGame() {
+                createKeyboard();
+                fetch('/game_state')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            newGame();
+                        } else {
+                            updateGameDisplay(data);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        newGame();
+                    });
+            }
+            
+            // Event listeners
+            newGameBtn.addEventListener('click', newGame);
+            
+            // Keyboard support
+            document.addEventListener('keydown', function(event) {
+                const key = event.key.toUpperCase();
+                if (/^[A-Z]$/.test(key)) {
+                    makeGuess(key);
+                }
+            });
+            
+            // Initialize the game
+            initGame();
+        });
+    </script>
+</body>
+</html>

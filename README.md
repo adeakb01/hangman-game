@@ -1,4 +1,4 @@
-# 💻 Adeeba Akbar - Hangman Game
+# Hangman Game
 
 A modern, interactive Hangman game built with Python Flask, featuring a clean web interface with keyboard support and visual hangman drawings
 
